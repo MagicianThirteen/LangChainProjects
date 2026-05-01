@@ -1,5 +1,7 @@
 from dotenv import load_dotenv
 from importlib.metadata import version
+
+from core_concepts import langchain_core_concepts
 load_dotenv()
 
 
@@ -21,4 +23,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    langchain_core_concepts()
+    #main()
