@@ -22,6 +22,6 @@ def main():
     print(f"Respose from ChatOpenAI:{response}")
 
 
-if __name__ == "__main__":
-    langchain_core_concepts()
-    #main()
+# if __name__ == "__main__":
+#     langchain_core_concepts()
+#     #main()
