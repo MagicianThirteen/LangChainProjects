@@ -1,3 +1,5 @@
+from itertools import product
+
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -38,7 +40,34 @@ def streaming_demo():
         print(chunk,end="",flush=True) #end=""表示不换行，flush=True表示立即输出，不缓冲
     print() #换行
 
+#检查内部的输入输出格式
+def schema_inspection_demo():
+    prompt=ChatPromptTemplate.from_template("总结一下文本：{text}")
+    model=ChatOpenAI(model="gpt-4o-mini",temperature=0.7)
+    parser=StrOutputParser()
+    chain=prompt|model|parser
+    #chain.invoke({"text":"剑来是部国产漫画，里面有很帅的女主角宁瑶"})
+
+    input_schema=chain.input_schema.model_json_schema()
+    output_schema=chain.output_schema.model_json_schema()
+    print(f"输入格式：{input_schema}")
+    print(f"输出格式：{output_schema}")
+
+#build一个简单的chain，生成一个产品的营销标语
+def build_production_chain():
+    prompt=ChatPromptTemplate.from_template("为定位是{audience}的人群定制一条{product}的营销标语，要求简短有效")
+    model=ChatOpenAI(model="gpt-4o-mini",temperature=0.7)
+    parser=StrOutputParser()
+    chain=prompt|model|parser
+    result=chain.invoke({"product":"人工智能课程","audience":"开发者"})
+    print(f"营销标语：{result}")
+    #输出营销标语："解锁AI潜能，成就开发者未来！"
+    
+
+
 if __name__ == "__main__":
     #langchain_core_concepts()
     #batch_demo()
-    streaming_demo()
+    #streaming_demo()
+    #schema_inspection_demo()
+    build_production_chain()
