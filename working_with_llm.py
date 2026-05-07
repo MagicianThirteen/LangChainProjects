@@ -27,19 +27,26 @@ def demo_multi_turn_conversation():
 
 #通过调用多个模型来检查不同模型的表现
 def demo_multis_model_comparison():
-    #方案一：
-    #定义多个模型，通过init_chat_model
-    model1=init_chat_model(model="gpt-4o-mini",temperature=0.7,streaming=True,max_retries=3,max_tokens=1000)
-    model2=init_chat_model(model="gpt-4o",temperature=0.7,streaming=True,max_retries=3,max_tokens=1000)
-    #模型放进一个列表然后遍历invoke，对比出答案
-    models=[model1,model2]
-    sys_msg=SystemMessage(content="你是剑来的热心观众")
-    hum_msg=HumanMessage(content="用一句话形容宁瑶")
+    sys_msg=SystemMessage(content="你是一个热心的观众，喜欢看剑来动画")
+    hum_msg=HumanMessage(content="一句话形容宁瑶")
     msgs=[sys_msg,hum_msg]
-    for model in models:
-        response=model.invoke(msgs)
-        print(f"{model.model_name}的关于宁瑶的回答: {response.content}")
-        
+    models=["gpt-4o-mini","gpt-4o"]
+    def get_response(msgs,models)->dict[str,str]:
+        response={}
+        for model in models:
+            model=init_chat_model(
+                model=model,
+                temperature=0.7,
+                streaming=False,
+                max_retries=3,
+                max_tokens=1000,
+            )
+            response[model.model_name]=model.invoke(msgs).content
+        return response
+    responses=get_response(msgs,models)
+    for modle_name, content in responses.items():
+        print(f"{modle_name}的回答: {content}")
+
 if __name__=="__main__":
     #demo_multi_turn_conversation()
     demo_multis_model_comparison()
