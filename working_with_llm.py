@@ -31,7 +31,7 @@ def demo_multis_model_comparison():
     hum_msg=HumanMessage(content="一句话形容宁瑶")
     msgs=[sys_msg,hum_msg]
     models=["gpt-4o-mini","gpt-4o"]
-    def get_response(msgs,models)->dict[str,str]:
+    def get_response(msgs:list[str],models:list[str])->dict[str,str]:
         response={}
         for model in models:
             model=init_chat_model(
