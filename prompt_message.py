@@ -68,10 +68,27 @@ def FewShotChatMessagePromptDemo():
     print(response.content)
     #model调用
 
+#可以复用的prompt比如扮演一个角色，回答一个问题
+def ReusablePromptDemo():
+    sys_prompt=ChatPromptTemplate.from_messages(
+    [
+        ("system","你是一个{role}"),
+    ]   
+    )
+    user_prompt=ChatPromptTemplate.from_messages(
+    [
+        ("human","{question}")
+    ]
+    )
+    com_prompt=sys_prompt+user_prompt
+    message=com_prompt.format_messages(role="剑来热心观众",question="请一句话介绍下宁瑶姑娘")
+    print(message)
+
 
 
 
 if __name__ == "__main__":
     #ChatPromptTemplateBasicDemo()
     #MultiMessagePromptDemo()
-    FewShotChatMessagePromptDemo()
+    #FewShotChatMessagePromptDemo()
+    ReusablePromptDemo()
