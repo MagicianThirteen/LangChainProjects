@@ -6,7 +6,7 @@ load_dotenv()
 #常见通用模板
 #基础模板，简单问答,把一段文字翻译成对应的语言{text}{language}
 #输出结果：“宁瑶真棒”可以翻译为 “Ning Yao is really awesome” 或者 “Ning Yao is great.”
-from langchain_core.prompts import ChatPromptTemplate,MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate,MessagesPlaceholder,FewShotChatMessagePromptTemplate
 
 from langchain.chat_models import init_chat_model
 def basic_prompt_template():
@@ -78,7 +78,37 @@ def demo_messages_placeholder():
     #因为，chain.invoke相当于message = prompt.format_messages(...)
     #response = model.invoke(message)，后面越来越复杂一直prompt.format_messages再model.invoke很繁琐
     
-    
+
+#小样本举例，通过喂给大模型一些样例，让大模型更好回答
+#输出结果：good
+def few_shot_demo():
+    exemples=[
+        {"input":"tall","output":"short"},
+        {"input":"big","output":"small"},
+    ]
+    examples_prompt=ChatPromptTemplate.from_messages(
+        [
+            ("human","请输入{input}的反义词"),
+            ("ai","{output}")
+        ]
+    )
+    few_shot=FewShotChatMessagePromptTemplate(
+        examples=exemples,
+        example_prompt=examples_prompt
+    )
+    final_prompt=ChatPromptTemplate.from_messages(
+        [
+            ("system","你是个很厉害的助手"),
+            few_shot,
+            ("human","请回答{word}的反义词")
+        ]
+    )
+    model=init_chat_model(model="gpt-4o-mini",temperature=0)
+    chain=final_prompt|model
+    response=chain.invoke({"word":"bad"})
+    print(response.content)
+   
+   
     
 
 
@@ -96,4 +126,5 @@ if __name__ == "__main__":
     #basic_prompt_template()
     #multi_message_template()
     #message_types_demo()
-    demo_messages_placeholder()
+    #demo_messages_placeholder()
+    few_shot_demo()
