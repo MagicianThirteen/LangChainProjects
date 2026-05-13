@@ -108,6 +108,27 @@ def few_shot_demo():
     response=chain.invoke({"word":"bad"})
     print(response.content)
    
+
+#组合出来的prompt，比如设定一个角色，的不同语气，去做不同的任务，这样prompt可以复用
+#输出:宁瑶是《剑来》中的重要角色之一，她是一个聪慧而坚韧的女子，性格独立，具有强烈的正义感。宁瑶出身于一个名门世家，家族背景显赫，但她并不依赖于家族的光环，而是凭借自己的努力和智慧在修行界中闯出一片天地。
+
+#在故事中，宁瑶与主角陈平安有着深厚的情感纠葛，她的成长和变化也与陈平安的经历密切相关。宁瑶不仅在武道上有着不俗的天赋，还展现出卓越的谋略和领导能力，常常在关键时刻为朋友和同伴提供支持。
+
+#总的来说，宁瑶是一个复杂而立体的角色，她的经历和性格使得她在《剑来》的故事中扮演了不可或缺的角色。
+def prompt_composition_demon():
+    system_prompt=ChatPromptTemplate.from_messages(
+        [
+            ("system","你的角色是{role}")
+        ]
+    )
+    user_prompt=ChatPromptTemplate.from_messages(
+        ("human","你的任务是{task}")
+    )
+    final_prompt=system_prompt+user_prompt
+    model=init_chat_model(model="gpt-4o-mini",temperature=0)
+    chain=final_prompt|model
+    response=chain.invoke({"role":"对剑来很熟悉的读者","task":"简单的介绍宁瑶"})
+    print(response.content[:20])
    
     
 
@@ -127,4 +148,5 @@ if __name__ == "__main__":
     #multi_message_template()
     #message_types_demo()
     #demo_messages_placeholder()
-    few_shot_demo()
+    #few_shot_demo()
+    prompt_composition_demon()
