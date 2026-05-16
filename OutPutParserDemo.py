@@ -24,8 +24,24 @@ def StrOutPutParserTest():
     print(response)
 
 
+#使用jsonparser，把用户的描述，拆成可以被处理的结构数据
+#输出结果：{'name': 'Alex', 'age': 25}
+from langchain_core.output_parsers import JsonOutputParser
+def JsonOutPutParserTest():
+    #prompt
+    prompt=ChatPromptTemplate.from_template("Return a JSON object with 'name' and 'age' for: {description} ")
+    #model
+    model=init_chat_model(model="gpt-4o-mini",temperature=0)
+    #jsonOutPutParser
+    jsonOutPutParser=JsonOutputParser()
+    chain=prompt|model|jsonOutPutParser
+    response=chain.invoke({"description":"A 25-year-old developer named Alex"})
+    print(response)
+
+
 
 
 
 if __name__ == "__main__":
-    StrOutPutParserTest()
+    #StrOutPutParserTest()\
+    JsonOutPutParserTest()
