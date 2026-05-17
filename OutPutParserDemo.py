@@ -38,10 +38,60 @@ def JsonOutPutParserTest():
     response=chain.invoke({"description":"A 25-year-old developer named Alex"})
     print(response)
 
+#pydantic outputparser
+#通过自己定义的结构化格式，要求llm输出成这样
+from langchain_core.output_parsers import PydanticOutputParser
+from pydantic import BaseModel,Field
+def PydanticOutPutParserTest():
+    #约定好格式
+    # class person(BaseModel):
+    #     name:str=Field(description="person name")
+    #     age:str=Field(description="person age")
+    # #解析器定义
+    # pydanticParser=PydanticOutputParser(pydantic_object=person)
+    # #prompt，并给prompt注入需要的格式
+    # prompt=ChatPromptTemplate.from_template("Return a JSON " \
+    # "object with 'name' and 'age' for:" \
+    # " {description}").partial(format_instructions=pydanticParser.get_format_instructions())
+    # #model
+    # model=init_chat_model(model="gpt-4o-mini",temperature=0)
+    # chain=prompt|model|pydanticParser
+    # response=chain.invoke({"description":"A 25-year-old developer named Alex"})
+    # print(response)
+    
+    
+    class Person(BaseModel):
+        name: str = Field(description="The person's name")
+        age: int = Field(description="The person's age")
+        occupation: str = Field(description="The person's occupation")
+
+
+    parser = PydanticOutputParser(pydantic_object=Person)
+
+    prompt = ChatPromptTemplate.from_template(
+        "Return a JSON object with 'name', 'age', and 'occupation' for: {description}"
+    ).partial(format_instructions=parser.get_format_instructions())
+    llm=init_chat_model(model="gpt-4o-mini",temperature=0)
+    chain = prompt | llm | parser
+    result = chain.invoke({"description": "A 30-year-old artist named Maria"})
+    print(result)  # Person(name='Maria', age=30, occupation='artist')
+
+#structure output,更通用的结构化输出版本，没有那么多步骤
+#输出这个：name='Alax' age=19
+def StructureOutPutDemo():
+    class person(BaseModel):
+        name:str=Field(description="person name")
+        age:int=Field(description="person age")
+    llm=init_chat_model(model="gpt-4o-mini",temperature=0)
+    structure_model=llm.with_structured_output(person)
+    response=structure_model.invoke("alax is 19")
+    print(response)
 
 
 
 
 if __name__ == "__main__":
     #StrOutPutParserTest()\
-    JsonOutPutParserTest()
+    #JsonOutPutParserTest()
+    #PydanticOutPutParserTest
+    StructureOutPutDemo()
