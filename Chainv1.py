@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableParallel
+from langchain_core.runnables import RunnableParallel,RunnableLambda,RunnablePassthrough
 
 load_dotenv()
 
@@ -35,10 +35,38 @@ def parallel_chain_demo():
     print(f"并行结果：{result['description']}")
 
 
+#passthrough chain,把最初输入传下去
+def passthrough_chain_demo():
+    prompt=ChatPromptTemplate.from_template(
+        "请根据上下文{context}回答问题{question}"
+    )
+    #定义一个查找返回的假数据的函数
+    def fake_retriever(input_dic):
+        return "剑来的女主是宁瑶"
+    #定义并行处理的runnable
+    parallel=RunnableParallel(
+        context=RunnableLambda(fake_retriever),
+        question=RunnablePassthrough(),
+    )
+    #定义一个lambda来整理数据
+    funx=RunnableLambda(
+        lambda x:{"context":x["context"],"question":x["question"]["question"]}
+    )
+   
+    #定义一个model
+    model=init_chat_model(model="gpt-4o-mini",temperature=0)
+    #定义一个解析strparser
+    parser=StrOutputParser()
+    chain=parallel|funx|prompt|model|parser
+    result=chain.invoke({"question":"剑来的女主是谁?"})
+    print(f"passthrough结果：{result}")
+
+
 
 
 
 
 if __name__ == "__main__":
     #basic_chain_demo()
-    parallel_chain_demo()
+    #parallel_chain_demo()
+    passthrough_chain_demo()
