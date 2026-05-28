@@ -3,7 +3,11 @@ from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableParallel,RunnableLambda,RunnablePassthrough
+from langchain_core.runnables import (
+    RunnableParallel,
+    RunnableLambda,
+    RunnablePassthrough,
+    RunnableBranch,)
 
 load_dotenv()
 
@@ -61,6 +65,43 @@ def passthrough_chain_demo():
     result=chain.invoke({"question":"剑来的女主是谁?"})
     print(f"passthrough结果：{result}")
 
+#Branching demo，更具输入的不同问题选择对应的agent
+#比如回答是关于剑来书里的角色问题，还是关于剑来的作者问题
+#输出结果：branching结果：《剑来》的女主角是李清照。她是小说中的重要角色之一，性格坚韧，聪慧过人，与男主角陈平安之间有着复杂的情感纠葛。小说通过她的视角展现了许多情节和人物关系。
+#branching结果：《剑来》的作者是烽火戏诸侯。这部小说在网络上非常受欢迎，讲述了一个关于修仙和江湖的故事。
+def branching_chain_demo():
+    #定义通用model
+    model=init_chat_model(model="gpt-4o-mini",temperature=0)
+    #定义通用parser
+    parser=StrOutputParser()
+    #定义一个角色问题的，prompt
+    role_prompt=ChatPromptTemplate.from_template("{book}的{question}")
+    #定义一个作者问题的，prompt
+    author_prompt=ChatPromptTemplate.from_template("{book}的{question}")
+    #定义一个用来分类的，prompt
+    classifier_prompt=ChatPromptTemplate.from_template("{question}是关于角色问题还是作者问题?只用回答角色或者作者")
+    classifier=classifier_prompt|model|parser
+    #定义一个根据分类prompt返回值来确定哪个分支的函数
+    def is_role_question(input_dic):
+        classification=classifier.invoke(input_dic)
+        return "角色" in classification
+    #定义一组question来测试，看看输出如何
+    questions=[
+        "剑来的女主是谁?",
+        "剑来的作者是谁?"
+    ]
+
+    branch=RunnableBranch(
+            (is_role_question,role_prompt|model|parser),
+            author_prompt|model|parser,
+        )
+
+    for q in questions: 
+        result=branch.invoke({"book":"剑来","question":q})
+        print(f"branching结果：{result}")
+       
+    
+
 
 
 
@@ -69,4 +110,5 @@ def passthrough_chain_demo():
 if __name__ == "__main__":
     #basic_chain_demo()
     #parallel_chain_demo()
-    passthrough_chain_demo()
+    #passthrough_chain_demo()
+    branching_chain_demo()
