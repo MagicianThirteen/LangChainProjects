@@ -99,10 +99,52 @@ def branching_chain_demo():
     for q in questions: 
         result=branch.invoke({"book":"剑来","question":q})
         print(f"branching结果：{result}")
+        
        
     
 
 
+#debug chain
+def demo_debbuging():
+    prompt=ChatPromptTemplate.from_template("{book}"
+    "的女主角的名字")
+    model=init_chat_model(model="gpt-4o-mini",temperature=0)
+    parser=StrOutputParser()
+    #chain=prompt|model|parser
+    #chain.invoke({"book":"剑来"})
+    #检查输入，输出的内部结构
+    #print("内部输入结构：",chain.input_schema.model_json_schema())
+    #print("输出结构: ",chain.output_schema.model_json_schema())
+    #输出结果：
+    #内部输入结构： {'properties': {'book': {'title': 'Book', 'type': 'string'}}, 'required': ['book'], 'title': 'PromptInput', 'type': 'object'}
+    #输出结构:  {'title': 'StrOutputParserOutput', 'type': 'string'}
+    
+    #方便langsmith查找调用情况，用with_config
+    # result=chain.with_config(
+    #     run_name="book_chain"
+    # ).invoke({"book":"剑来"})
+    #print(f"book_chain:{result}")
+    #输出：book_chain:《剑来》的女主角是李青莲。
+    #这里的run_name影响的是langsmith看到的东西
+    #通过插入runnablelambda来测试log，打印两个阶段的东西
+    #after prompt after model
+    def log_step(x,step_name):
+        print(f"[{step_name}]:{type(x).__name__}:{str(x)[:10]}")
+        return x
+    chain=(prompt|
+           RunnableLambda(lambda x:log_step(x,"after prompt"))
+           |model|
+           RunnableLambda(lambda x:log_step(x,"after model"))
+           |parser
+           )
+    result=chain.invoke({"book":"剑来"})
+#     输出这个
+#     [after prompt]:ChatPromptValue:messages=[
+#     [after model]:AIMessage:content='《
+#     book_chain:《剑来》的女主角是李清照。她是小说中的重要角色之一，具有独特的个性和背景。小说围绕她与主角的互动以及他们在修仙世界中的冒险展开。
+    print(f"book_chain:{result}")
+    
+        
 
 
 
@@ -111,4 +153,5 @@ if __name__ == "__main__":
     #basic_chain_demo()
     #parallel_chain_demo()
     #passthrough_chain_demo()
-    branching_chain_demo()
+    #branching_chain_demo()
+    demo_debbuging()
