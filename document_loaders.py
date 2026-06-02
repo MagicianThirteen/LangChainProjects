@@ -3,6 +3,7 @@ load_dotenv()
 from langchain_community.document_loaders import(
     TextLoader,
     WebBaseLoader,
+    PyPDFLoader
 )
 from langchain_core.documents import Document
 from langchain_community.document_loaders import DirectoryLoader
@@ -128,10 +129,33 @@ new doc content hello agent
 new doc metadata {'source': 'https://example.com', 'author': 'zhang', 'created_at': '2026.6.2', 'tag': 'test', 'update': True}
 '''
 
+#使用pdf加载器解析pdf pypdfloader
+def pdf_demo(pathstr):
+    pdfloader=PyPDFLoader(pathstr)
+    documents=pdfloader.load()
+    for i,doc in enumerate(documents):
+        print(f"{i+1}page content: {doc.page_content[:100]}")
+        print(f"page{i+1} metadata: {doc.metadata}")
+    '''
+    输出这个
+    1page content: LangChain Document Loaders - Demo Document
+Understanding LangChain Document Loaders
+1. Introduction
+
+page1 metadata: {'producer': 'PyPDF', 'creator': 'PyPDF', 'creationdate': '2026-02-02T21:45:08+00:00', 'source': './docs/langchain_demo.pdf', 'total_pages': 3, 'page': 0, 'page_label': '1'}
+2page content: LangChain Document Loaders - Demo Document
+4. Best Practices
+When working with document loaders, con
+page2 metadata: {'producer': 'PyPDF', 'creator': 'PyPDF', 'creationdate': '2026-02-02T21:45:08+00:00', 'source': './docs/langchain_demo.pdf', 'total_pages': 3, 'page': 1, 'page_label': '2'}
+3page content: LangChain Document Loaders - Demo Document
+formatting, and provides realistic content for testing yo
+page3 metadata: {'producer': 'PyPDF', 'creator': 'PyPDF', 'creationdate': '2026-02-02T21:45:08+00:00', 'source': './docs/langchain_demo.pdf', 'total_pages': 3, 'page': 2, 'page_label': '3'}
+    '''
 
 
 if __name__ == "__main__":
     #load_text_file()
     #web_loader()
     #lazy_loader()
-    doc_structure()
+    #doc_structure()
+    pdf_demo("./docs/langchain_demo.pdf")
