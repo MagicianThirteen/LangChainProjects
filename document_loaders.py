@@ -4,6 +4,7 @@ from langchain_community.document_loaders import(
     TextLoader,
     WebBaseLoader,
 )
+from langchain_core.documents import Document
 from langchain_community.document_loaders import DirectoryLoader
 print("加载Directoryloader的包")
 import os
@@ -94,19 +95,43 @@ def lazy_loader():
         for doc in loader.load():
             print(f"doc:{doc.page_content}")
             print(f"doc metadata:{doc.metadata['source'][:10]}")
+
+
+#使用Document对象
+def doc_structure():
+    doc=Document(
+        page_content="hello",
+        metadata={"source": r"https://example.com",
+                  "author":"zhang",
+                  "created_at":"2026.6.2",
+                  "tag":"test"}
+        
+    )
+    print(f"doc_content{doc.page_content}")
+    print(f"  metadata: {doc.metadata}")
+
+    #更新,是创造个新的替换原来那个
+    #doc.page_content=doc.page_content+"agent"（这个做法是错的）
+    #print(f"doc_content new{doc.page_content}")
+
+    new_doc=Document(
+        page_content=doc.page_content+" agent",
+        metadata={**doc.metadata,"update":True}
+    )
+    print(f"new doc content {new_doc.page_content}")
+    print(f"new doc metadata {new_doc.metadata}")
 '''
 输出这个
-加载Directoryloader的包
-doc:hello0
-doc metadata:C:\Users\M
-doc:hello2
-doc metadata:C:\Users\M
-doc:hello1
-doc metadata:C:\Users\M
+doc_contenthello
+  metadata: {'source': 'https://example.com', 'author': 'zhang', 'created_at': '2026.6.2', 'tag': 'test'}
+new doc content hello agent
+new doc metadata {'source': 'https://example.com', 'author': 'zhang', 'created_at': '2026.6.2', 'tag': 'test', 'update': True}
 '''
+
 
 
 if __name__ == "__main__":
     #load_text_file()
     #web_loader()
-    lazy_loader()
+    #lazy_loader()
+    doc_structure()
