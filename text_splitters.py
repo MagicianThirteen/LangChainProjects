@@ -1,5 +1,6 @@
 from langchain_text_splitters import(
     RecursiveCharacterTextSplitter,
+    MarkdownHeaderTextSplitter
 )
 from dotenv import load_dotenv
 load_dotenv()
@@ -98,7 +99,41 @@ def recursive_splitter():
 
     Machine learning is a subset of artificial intelligence that ena
     '''
-    
+
+#markdown的splitters的使用
+def markdown_splitter():
+    headers_to_consider=[
+        ("#","h1"),
+        ("##","h2"),
+        ("###","h3"),
+    ]
+    splitter=MarkdownHeaderTextSplitter(
+        headers_to_split_on=headers_to_consider,
+        strip_headers=True,#正文要不要带标题，默认是true
+    )
+    chunks=splitter.split_text(SAMPLE_TEXT)
+    print(f"产生{len(chunks)}个chunk")
+    for i,chunk in enumerate(chunks):
+       print(f"第{i+1}个chunk的metadata是：{chunk.metadata}")
+       print(f"第{i+1}个chunk的content是：{chunk.page_content[:100]}")
+'''
+输出这个
+产生4个chunk
+第1个chunk的metadata是：{'h1': 'Introduction to Machine Learning'}
+第1个chunk的content是：Machine learning is a subset of artificial intelligence that enables systems to learn and improve fr
+第2个chunk的metadata是：{'h1': 'Introduction to Machine Learning', 'h2': 'Types of Machine Learning', 'h3': 'Supervised Learning'}
+第2个chunk的content是：Supervised learning uses labeled data to train models. The algorithm learns to map inputs to outputs
+第3个chunk的metadata是：{'h1': 'Introduction to Machine Learning', 'h2': 'Types of Machine Learning', 'h3': 'Unsupervised Learning'}
+第3个chunk的content是：Unsupervised learning finds hidden patterns in unlabeled data. The algorithm discovers structure wit
+第4个chunk的metadata是：{'h1': 'Introduction to Machine Learning', 'h2': 'Applications'}
+第4个chunk的content是：Machine learning is used in many fields:
+1. Image recognition
+2. Natural language processing
+3. Reco
+
+
+'''
+
 
 
 
@@ -116,4 +151,5 @@ def recursive_splitter():
 
 
 if __name__ == "__main__":
-  recursive_splitter()
+  #recursive_splitter()
+  markdown_splitter()
