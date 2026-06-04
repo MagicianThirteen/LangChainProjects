@@ -3,6 +3,7 @@ from langchain_text_splitters import(
     MarkdownHeaderTextSplitter,
     Language
 )
+from langchain_community.document_loaders import PyPDFLoader
 from dotenv import load_dotenv
 load_dotenv()
  
@@ -168,6 +169,45 @@ def binary_search(arr, target):
 
 '''
 
+#pdf先读取，在分割
+def pdf_splitter():
+  pdfloader=PyPDFLoader(".\docs\langchain_demo.pdf")
+  documents=pdfloader.load()
+
+  #分割
+  #注意，这里是先生成分割器，然后用分割器的方式去分割
+  pdf_splitter=RecursiveCharacterTextSplitter(
+     chunk_size=500,
+     chunk_overlap=50,
+  )
+  chunks=pdf_splitter.split_documents(documents)
+
+  for i,chunk in enumerate(chunks):
+     print(f"{i+1} chunk meatada: {chunk.metadata}")
+     print(f"{i+1} chunk content: {chunk.page_content}")
+'''
+输出这样的，后面数据太长了就不贴了
+1 chunk meatada: {'producer': 'PyPDF', 'creator': 'PyPDF', 'creationdate': '2026-02-02T21:45:08+00:00', 'source': '.\\docs\\langchain_demo.pdf', 'total_pages': 3, 'page': 0, 'page_label': '1'}
+1 chunk content: LangChain Document Loaders - Demo Document
+Understanding LangChain Document Loaders
+1. Introduction
+LangChain provides powerful document loaders that allow you to ingest data from various sources into your
+LLM applications. Document loaders are essential for building RAG (Retrieval-Augmented Generation)
+systems, chatbots, and knowledge bases.
+This document serves as a demo file to test PDF loading capabilities in LangChain. When loaded, this
+2 chunk meatada: {'producer': 'PyPDF', 'creator': 'PyPDF', 'creationdate': '2026-02-02T21:45:08+00:00', 'source': '.\\docs\\langchain_demo.pdf', 'total_pages': 3, 'page': 0, 'page_label': '1'}
+2 chunk content: content will be split into chunks and can be used for vector storage and retrieval.
+2. Types of Document Loaders
+  PyPDFLoader: Load PDF files page by page with metadata
+  TextLoader: Load plain text files (.txt)
+  CSVLoader: Load CSV files with row-based documents
+  JSONLoader: Load JSON files with jq-style extraction
+  UnstructuredLoader: Handle various file formats automatically
+  DirectoryLoader: Load all files from a directory
+  WebBaseLoader: Scrape and load web pages
+
+'''
+
 
 
 
@@ -185,4 +225,5 @@ def binary_search(arr, target):
 if __name__ == "__main__":
   #recursive_splitter()
   #markdown_splitter()
-  code_splitters()
+  #code_splitters()
+  pdf_splitter()
