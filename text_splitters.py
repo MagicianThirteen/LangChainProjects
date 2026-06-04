@@ -1,6 +1,7 @@
 from langchain_text_splitters import(
     RecursiveCharacterTextSplitter,
-    MarkdownHeaderTextSplitter
+    MarkdownHeaderTextSplitter,
+    Language
 )
 from dotenv import load_dotenv
 load_dotenv()
@@ -134,7 +135,38 @@ def markdown_splitter():
 
 '''
 
+#切割代码
+def code_splitters():
+   python_splitters=RecursiveCharacterTextSplitter.from_language(
+      language=Language.PYTHON,
+      chunk_size=500,
+      chunk_overlap=50,
+   )
+   chunks=python_splitters.split_text(SAMPLE_CODE)
 
+   for i,chunk in enumerate(chunks):
+      print(f"{i+1} chunk chars: {len(chunk)}")
+      print(f"{chunk[:150]}..." if len(chunk)>150 else chunk)
+
+'''
+输出
+1 chunk chars: 390
+def quicksort(arr):
+    """
+    Quicksort implementation in Python.
+    Time complexity: O(n log n) average, O(n²) worst case.
+    """
+    if len(arr)...
+2 chunk chars: 402
+def binary_search(arr, target):
+    """
+    Binary search implementation.
+    Requires sorted array.
+    Time complexity: O(log n)
+    """
+    left, r...
+
+'''
 
 
 
@@ -152,4 +184,5 @@ def markdown_splitter():
 
 if __name__ == "__main__":
   #recursive_splitter()
-  markdown_splitter()
+  #markdown_splitter()
+  code_splitters()
