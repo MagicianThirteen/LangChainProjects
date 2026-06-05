@@ -1,7 +1,9 @@
 from langchain_openai.embeddings import OpenAIEmbeddings
 from dotenv import load_dotenv
 import numpy as np
-
+from langchain_classic.embeddings.cache import CacheBackedEmbeddings
+from langchain_classic.storage import LocalFileStore
+import tempfile
 
 load_dotenv()
 
@@ -43,6 +45,42 @@ def Similarity_Search():
     
     '''
 
+#使用向量缓存
+def embedding_cache():
+    text=["hello agent"]
+    #创建一个临时文件
+    with tempfile.TemporaryDirectory() as tmpDir:
+        #定义存储位置
+        store=LocalFileStore(root_path=tmpDir)
+        #定义向量模型，带缓存版本
+        embedding_model=OpenAIEmbeddings(model="text-embedding-3-small")
+        embedding=CacheBackedEmbeddings.from_bytes_store(
+            underlying_embeddings=embedding_model,
+            document_embedding_cache=store,
+            namespace="openai"
+        )
+
+        print(f"第一次向量用openai服务器")
+        vect1=embedding.embed_documents(text)
+        print(f"embeded{len(vect1)}个document")
+
+        print(f"第二次向量用缓存")
+        vect2=embedding.embed_documents(text)
+        print(f"embeded{len(vect2)}个document")
+
+        print(f"\nSame vectors:{np.allclose(vect1,vect2)}")    
+
+        '''
+        输出这个：
+        第一次向量用openai服务器
+        embeded1个document
+        第二次向量用缓存
+        embeded1个document
+
+        Same vectors:True
+        
+        '''
+
     
 
 
@@ -51,4 +89,5 @@ def Similarity_Search():
 
 
 if __name__ == "__main__":
-    Similarity_Search()
+    #Similarity_Search()
+    embedding_cache()
