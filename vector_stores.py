@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 embedding_model=OpenAIEmbeddings(model="text-embedding-3-small")
+persist_directory="./chroma_db"
 
 SAMPLE_DOCS = [
     Document(
@@ -77,8 +78,42 @@ def chroma_search_with_scores():
         f"来源是{doc.metadata['source']}"
     )
 
+def persist_chroma():
+    vectorstore=Chroma.from_documents(
+         embedding=embedding_model,
+         persist_directory=persist_directory,
+         documents=SAMPLE_DOCS
+    )
+
+    print(f"当前有{vectorstore._collection.count()}个数据")
+
+    del vectorstore
+
+    reloaded_store=Chroma(
+         embedding_function=embedding_model,
+         persist_directory=persist_directory
+    ) 
+    reloaded_count=reloaded_store._collection.count()
+    print(f"重新加载后当前有{reloaded_count}个数据")
+
+    result=reloaded_store.similarity_search(query="Langchain",k=2,
+                                            filter={"topic": "overview"})
+    for c in result:
+         print(f"{c.page_content[:50]}\n")
+    
+    '''
+    当前有8个数据
+    重新加载后当前有8个数据
+    LangChain is a framework for developing applicatio
+
+    LangGraph is a library for building stateful, mult
+    '''
+
+
+
 
 
 if __name__ == "__main__":
    # chroma_basics()
-   chroma_search_with_scores()
+   #chroma_search_with_scores()
+   persist_chroma()
