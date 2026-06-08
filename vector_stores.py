@@ -109,6 +109,40 @@ def persist_chroma():
     LangGraph is a library for building stateful, mult
     '''
 
+def as_retriever():
+    vectorstore=Chroma.from_documents(
+         documents=SAMPLE_DOCS,
+         persist_directory="./chroma.db",
+         embedding=embedding_model
+    )
+    s_retriever=vectorstore.as_retriever(
+         search_type="similarity",
+         search_kwargs={"k":3}
+    )
+    s_result=s_retriever.invoke("LangChain")
+    for doc in s_result:
+         print(f"相似检索的内容：{doc.page_content}")
+    '''
+    相似检索的内容：LangChain is a framework for developing applications powered by language models.
+    相似检索的内容：LangGraph is a library for building stateful, multi-actor applications with LLMs.
+    相似检索的内容：Chroma is an open-source embedding database for AI applications.
+    '''
+
+    m_retriever=vectorstore.as_retriever(
+         search_type="mmr",
+         search_kwargs={"k":3,"fecth_k":5}
+    )
+    m_result=m_retriever.invoke("AI applications")
+    for doc in m_result:
+        print(f"mmr相关检索的内容：{doc.page_content}")
+    
+    '''
+    mmr相关检索的内容：Chroma is an open-source embedding database for AI applications.
+    mmr相关检索的内容：FAISS is a library for efficient similarity search developed by Facebook.
+    mmr相关检索的内容：LangGraph is a library for building stateful, multi-actor applications with LLMs.
+    
+    '''
+         
 
 
 
@@ -116,4 +150,5 @@ def persist_chroma():
 if __name__ == "__main__":
    # chroma_basics()
    #chroma_search_with_scores()
-   persist_chroma()
+   #persist_chroma()
+   as_retriever()
