@@ -142,6 +142,60 @@ def as_retriever():
     mmr相关检索的内容：LangGraph is a library for building stateful, multi-actor applications with LLMs.
     
     '''
+
+def vector_store_use():
+    sample_texts = [
+        "Python is a versatile programming language used in web development, "
+        "data science, machine learning, and automation. It has a simple syntax "
+        "that makes it easy to learn and read.",
+        "JavaScript is the language of the web. It runs in browsers and on "
+        "servers with Node.js. Modern frameworks like React and Vue make "
+        "building web applications efficient.",
+        "Rust is a systems programming language focused on safety and "
+        "performance. It prevents common bugs like null pointer dereferences "
+        "and data races at compile time.",
+    ] 
+
+    queries = [
+        "What's good for web development?",
+        "Which language is safest?",
+    ]
+
+    #把list[str]=>list[document]
+    documents=[Document(page_content=c)for c in sample_texts]
+    #制作分割器，其中list[document],chunk_size,chunk_overlap
+    def getchunks(documents,chunk_size,chunk_overlap):
+        spliter=RecursiveCharacterTextSplitter(
+             chunk_size=chunk_size,
+             chunk_overlap=chunk_overlap
+        )
+        chunks=spliter.split_documents(documents)
+        return chunks
+    #作为参数
+    #把分割好的chunk（list[document]）放入建好的数据库
+    chunks=getchunks(documents,200,50)
+    vectorstore=Chroma.from_documents(
+         documents=chunks,
+         persist_directory="./tdb",
+         embedding=OpenAIEmbeddings(model="text-embedding-3-small")
+    )
+    #通过数据库检索(retriever)
+    retriever=vectorstore.as_retriever(
+         search_type="similarity",
+         search_kwargs={"k":2}
+    )
+    for q in queries:
+        result=retriever.invoke(q)
+        for r in result:
+            print(f"{r.page_content}")
+'''
+ding web applications efficient.
+Python is a versatile programming language used in web development, data science, machine learning, and automation. It has a simple syntax that makes it easy to learn and read.
+Rust is a systems programming language focused on safety and performance. It prevents common bugs like null pointer dereferences and data races at compile time.
+JavaScript is the language of the web. It runs in browsers and on servers with Node.js. Modern frameworks like React and Vue make building web applications efficient.
+
+
+'''
          
 
 
@@ -151,4 +205,5 @@ if __name__ == "__main__":
    # chroma_basics()
    #chroma_search_with_scores()
    #persist_chroma()
-   as_retriever()
+   #as_retriever()
+   vector_store_use()
