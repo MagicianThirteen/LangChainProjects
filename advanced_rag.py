@@ -11,6 +11,9 @@ from langchain.chat_models import init_chat_model
 from langchain_classic.storage import InMemoryStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_classic.retrievers import ParentDocumentRetriever
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
 import logging
 
 load_dotenv()
@@ -418,14 +421,102 @@ AI agents are autonomous systems that can perceive their environment, make decis
 
 The k
     '''
+def format_docs(documents):
+    return "\n\n".join(doc.page_content for doc in documents)
 
+def advanced_rag_chain():
+    vectorestore=return_vectorstore(TECH_DOCS)
+    base_retriever=vectorestore.as_retriever(
+        search_kwargs={"k":3}
+    )
+    multiquery_retriever=MultiQueryRetriever.from_llm(
+        llm=llm,
+        retriever=base_retriever
+    )
+
+    compressor=LLMChainExtractor.from_llm(
+        llm=llm
+    )
+    advanced_retriever=ContextualCompressionRetriever(
+        base_compressor=compressor,
+        base_retriever=multiquery_retriever
+    )
+    prompt=ChatPromptTemplate.from_template(
+                """
+        Answer the question based on the following context. Be specific and cite which technologies you're referring to.
+
+        Context:
+        {context}
+
+        Question: {question}
+
+        Answer:"""
+    )
+    parser=StrOutputParser()
+    chain={"context":advanced_retriever|format_docs,
+           "question":RunnablePassthrough()}|prompt|llm|parser
+    questions = [
+        "What options do I have for building AI agents?",
+        "How can I store and search embeddings?",
+    ]
+    for q in questions:
+        print(f"queston：{q}\n")
+        answer=chain.invoke(q)
+        print(f"answer: {answer}")
+    
+    '''
+    queston：What options do I have for building AI agents?
+
+httpx---HTTP Request: POST https://poloai.top/v1/chat/completions "HTTP/1.1 200 OK"
+langchain_classic.retrievers.multi_query---Generated queries: ['What are the different approaches I can take to create AI agents?  ', 'What methods are available for developing AI agents?  ', 'Can you provide me with various strategies for constructing AI agents?']
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/chat/completions "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/chat/completions "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/chat/completions "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/chat/completions "HTTP/1.1 200 OK"
+answer: You have several options for building AI agents, particularly through the use of LangChain and LangGraph technologies:
+
+1. **LangChain**: This framework allows you to build applications using Large Language Models (LLMs) by providing essential tools such as:
+   - **Prompts**: Create and manage prompts for interacting with LLMs.
+   - **Chains**: Develop sequences of operations that can be executed in a defined order.
+   - **Agents**: Implement agents that can make decisions based on inputs and outputs from LLMs.
+   - **Memory**: Utilize memory capabilities to maintain context across interactions, enabling more coherent and context-aware conversations.
+
+2. **LangGraph**: This library builds upon LangChain and is specifically designed for stateful, multi-actor applications. Key features include:
+   - **State Management**: Keep track of the state across different interactions, which is crucial for complex applications.
+   - **Cycles and Loops**: Implement workflows that require iterative processes or repeated actions.
+   - **Human-in-the-Loop Workflows**: Integrate human feedback into the decision-making process, enhancing the agent's performance and adaptability.
+   - **Persistence**: Store and retrieve state information, allowing for continuity in interactions over time.
+
+By leveraging these technologies, you can create sophisticated AI agents that can handle a variety of tasks, from simple interactions to complex workflows involving multiple actors and states.
+queston：How can I store and search embeddings?
+
+httpx---HTTP Request: POST https://poloai.top/v1/chat/completions "HTTP/1.1 200 OK"
+langchain_classic.retrievers.multi_query---Generated queries: ['What are the best methods for storing and retrieving embeddings in a database?', 'How can I efficiently manage and query embedding vectors for my applications?', 'What techniques can I use to store embeddings and perform searches on them effectively?']
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/chat/completions "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/chat/completions "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/chat/completions "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/chat/completions "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/chat/completions "HTTP/1.1 200 OK"
+answer: To store and search embeddings, you can use specialized vector databases such as **Pinecone**, **Chroma**, or **Qdrant**. These databases are optimized for handling embeddings and enable semantic similarity search, which is particularly useful for Retrieval-Augmented Generation (RAG) applications. They typically support features like metadata filtering and hybrid search, allowing you to combine keyword searches with vector searches for more refined results.
+
+Alternatively, you can use **PostgreSQL** with the **pgvector** extension. This allows you to store vector embeddings alongside other data types, such as JSON. PostgreSQL also supports full-text search, enabling you to perform searches that combine both traditional keyword queries and vector similarity searches.
+
+In summary, for dedicated embedding storage and search, consider using Pinecone, Chroma, or Qdrant. For a more general-purpose database solution that includes vector capabilities, PostgreSQL with pgvector is a viable option.
+    '''
 
 
 if __name__ == "__main__":
    # multi_query_retriever()
    #contextual_compression_retriever()
    #hybird_search()
-   parent_document_retriever()
+   #parent_document_retriever()
+   advanced_rag_chain()
 
 
 
