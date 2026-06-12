@@ -8,6 +8,9 @@ from langchain_classic.retrievers.document_compressors import LLMChainExtractor
 from langchain_community.retrievers import BM25Retriever
 from langchain_classic.retrievers import EnsembleRetriever
 from langchain.chat_models import init_chat_model
+from langchain_classic.storage import InMemoryStore
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_classic.retrievers import ParentDocumentRetriever
 import logging
 
 load_dotenv()
@@ -157,6 +160,45 @@ with cross-region replication. RTO is 4 hours, and RPO is 1 hour.""",
         metadata={"source": "technical_docs_v2.4.pdf"},
     ),
 ]
+
+long_doc = Document(
+        page_content="""
+# Complete Guide to Building AI Agents
+
+## Chapter 1: Introduction to AI Agents
+
+AI agents are autonomous systems that can perceive their environment, make decisions, and take actions to achieve goals. Unlike simple chatbots, agents can use tools, maintain state, and execute multi-step plans.
+
+The key components of an AI agent include:
+- A language model for reasoning
+- Tools for interacting with external systems
+- Memory for maintaining context
+- A planning mechanism for complex tasks
+
+## Chapter 2: Agent Frameworks
+
+Several frameworks exist for building AI agents:
+
+LangChain provides the foundational abstractions for chains and simple agents. It excels at straightforward tool-calling patterns and integrates with many LLM providers.
+
+LangGraph extends LangChain for complex, stateful agents. It introduces graph-based state management, enabling cycles, human-in-the-loop workflows, and persistent execution.
+
+CrewAI focuses on multi-agent collaboration, allowing teams of specialized agents to work together on complex tasks.
+
+## Chapter 3: Production Considerations
+
+Deploying agents to production requires careful attention to:
+- Error handling and fallbacks
+- Token usage optimization
+- Observability and tracing
+- Security and access control
+- State persistence and recovery
+
+LangSmith provides observability for LangChain/LangGraph applications, offering tracing, evaluation, and monitoring capabilities.
+        """,
+        metadata={"source": "ai_agents_guide.md"},
+    )
+
 
 embedding_model=OpenAIEmbeddings(model="text-embedding-3-small")
 llm=init_chat_model(model="gpt-4o-mini",temperature=0.2)
@@ -329,12 +371,61 @@ small consulting firm helping enterprises adopt machine learning. Ou
     
     '''
 
+def parent_document_retriever():
+    query = "What is LangGraph used for?"
+    #建立两个空的store，一个是vectorstore用来存child，一个是存在内存的store用来存parent
+    vectorstore=Chroma(
+        collection_name="child_parent_store",
+        embedding_function=embedding_model
+    )
+    parentstore=InMemoryStore()
+    child_splitter=RecursiveCharacterTextSplitter(
+        chunk_size=200,
+        chunk_overlap=20,
+    )
+    parent_splitter=RecursiveCharacterTextSplitter(
+        chunk_size=800,
+        chunk_overlap=100,
+    )
+
+    retriever=ParentDocumentRetriever(
+        vectorstore=vectorstore,
+        docstore=parentstore,
+        child_splitter=child_splitter,
+        parent_splitter=parent_splitter
+    )
+    #注意，这步添加文档一定是ParentDocumentRetriever自己控制
+    retriever.add_documents([long_doc])
+
+    result=retriever.invoke(query)
+    for doc in result:
+        print(f"{doc.page_content[:300]}")
+    
+    '''
+      from langchain_community.retrievers import BM25Retriever
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+LangGraph extends LangChain for complex, stateful agents. It introduces graph-based state management, enabling cycles, human-in-the-loop workflows, and persistent execution.
+
+CrewAI focuses on multi-agent collaboration, allowing teams of specialized agents to work together on complex tasks.
+
+## Chap
+# Complete Guide to Building AI Agents
+
+## Chapter 1: Introduction to AI Agents
+
+AI agents are autonomous systems that can perceive their environment, make decisions, and take actions to achieve goals. Unlike simple chatbots, agents can use tools, maintain state, and execute multi-step plans.
+
+The k
+    '''
+
 
 
 if __name__ == "__main__":
    # multi_query_retriever()
    #contextual_compression_retriever()
-   hybird_search()
+   #hybird_search()
+   parent_document_retriever()
 
 
 
