@@ -5,6 +5,8 @@ from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_classic.retrievers.multi_query import MultiQueryRetriever
 from langchain_classic.retrievers import ContextualCompressionRetriever
 from langchain_classic.retrievers.document_compressors import LLMChainExtractor
+from langchain_community.retrievers import BM25Retriever
+from langchain_classic.retrievers import EnsembleRetriever
 from langchain.chat_models import init_chat_model
 import logging
 
@@ -236,10 +238,103 @@ LLMs. Key features include state mana
     
     '''
 
+def hybird_search():
+    #制作两个retriever，一个bm25，一个语义，然后融合
+    vectorstore=return_vectorstore(INFO_BURIED)
+    semantic_retriever=vectorstore.as_retriever(
+        search_kwargs={"k":3}
+    )
+    key_retriever=BM25Retriever.from_documents(
+        documents=INFO_BURIED
+    )
+    key_retriever.k=3
+
+    ensemble_retriever=EnsembleRetriever(
+        retrievers=[key_retriever,semantic_retriever],
+        weights=[0.4,0.6]
+    )
+
+    queries = [
+        "ACID transactions",  # Keyword-heavy (BM25 helps)
+        "How do I store AI model outputs for later retrieval?",  # Semantic (vectors help)
+        "fast similarity lookup for embeddings",  # Mixed
+    ]
+
+    #对比
+    for q in queries:
+        keydocs=key_retriever.invoke(q)
+        semanticdocs=semantic_retriever.invoke(q)
+        ensembledocs=ensemble_retriever.invoke(q)
+
+        print(f"keydocs:{keydocs[0].page_content[:200]}")
+        print(f"semanticdocs:{semanticdocs[0].page_content[:200]}")
+        print(f"ensembledocs:{ensembledocs[0].page_content[:200]}")
+    
+
+    '''
+from langchain_community.retrievers import BM25Retriever
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+keydocs:ACME AI PLATFORM - TECHNICAL DOCUMENTATION v2.4
+
+Chapter 1: System Architecture Overview
+
+The ACME AI Platform is built on a microservices architecture deployed on
+AWS EKS (Elastic Kubernetes Service)
+semanticdocs:ACME AI PLATFORM - TECHNICAL DOCUMENTATION v2.4
+
+Chapter 1: System Architecture Overview
+
+The ACME AI Platform is built on a microservices architecture deployed on
+AWS EKS (Elastic Kubernetes Service)
+ensembledocs:ACME AI PLATFORM - TECHNICAL DOCUMENTATION v2.4
+
+Chapter 1: System Architecture Overview
+
+The ACME AI Platform is built on a microservices architecture deployed on
+AWS EKS (Elastic Kubernetes Service)
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+keydocs:ACME AI SOLUTIONS - COMPANY HISTORY AND TECHNOLOGY STACK
+
+Founded in 2018 by three Stanford graduates, ACME AI Solutions began as a
+small consulting firm helping enterprises adopt machine learning. Ou
+semanticdocs:ACME AI PLATFORM - TECHNICAL DOCUMENTATION v2.4
+
+Chapter 1: System Architecture Overview
+
+The ACME AI Platform is built on a microservices architecture deployed on
+AWS EKS (Elastic Kubernetes Service)
+ensembledocs:ACME AI PLATFORM - TECHNICAL DOCUMENTATION v2.4
+
+Chapter 1: System Architecture Overview
+
+The ACME AI Platform is built on a microservices architecture deployed on
+AWS EKS (Elastic Kubernetes Service)
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+httpx---HTTP Request: POST https://poloai.top/v1/embeddings "HTTP/1.1 200 OK"
+keydocs:ACME AI SOLUTIONS - COMPANY HISTORY AND TECHNOLOGY STACK
+
+Founded in 2018 by three Stanford graduates, ACME AI Solutions began as a
+small consulting firm helping enterprises adopt machine learning. Ou
+semanticdocs:ACME AI SOLUTIONS - COMPANY HISTORY AND TECHNOLOGY STACK
+
+Founded in 2018 by three Stanford graduates, ACME AI Solutions began as a
+small consulting firm helping enterprises adopt machine learning. Ou
+ensembledocs:ACME AI SOLUTIONS - COMPANY HISTORY AND TECHNOLOGY STACK
+
+Founded in 2018 by three Stanford graduates, ACME AI Solutions began as a
+small consulting firm helping enterprises adopt machine learning. Ou
+    
+    '''
+
+
 
 if __name__ == "__main__":
    # multi_query_retriever()
-   contextual_compression_retriever()
+   #contextual_compression_retriever()
+   hybird_search()
 
 
 
