@@ -122,7 +122,81 @@ System:You are a helpful coding assistant.
 Human:Can you summarize everything we discussed?
     '''
 
+def window_memory():
+    #这些是模拟告诉ai的信息
+    exchanges = [
+        "My name is Paulo",
+        "I live in Seattle",
+        "I work as an AI engineer",
+        "I have 2 cats",
+        "What do you remember about me?",
+    ]
+
+    class WindowMessageHistory(InMemoryChatMessageHistory):
+        k:int=3 #这个要放到类属性里才能被创建的时候就访问
+        def add_messages(self, message):
+            #定义k，只保留最后k轮的对话
+            #self.k=3
+            
+            super().add_messages(message)
+            if len(self.messages)>self.k*2:
+                self.messages=self.messages[-(self.k*2):]
+            return self.messages
+    store:Dict[str,WindowMessageHistory]={}
+    def get_session_id(session_id:str):
+        if session_id not in store:
+            store[session_id]=WindowMessageHistory(k=2)
+        return store[session_id]
+    
+    prompt=ChatPromptTemplate.from_messages(
+        [
+            ("system","你是个很有用的助手"),
+            MessagesPlaceholder(variable_name="history"),
+            ("human","{input}")
+            
+        ]
+    )
+    chain=prompt|llm|parser
+    chain_with_window=RunnableWithMessageHistory(
+        chain,
+        input_messages_key="input",
+        history_messages_key="history",
+        get_session_history=get_session_id,
+    )
+
+    for q in exchanges:
+        print(f"问题是{q}")
+        result=chain_with_window.invoke(
+            {"input":q},
+            config={"configurable":{"session_id":"window_agent"}}
+        )
+        print(f"回答是{result}")
+    
+    history=store["window_agent"].messages
+    print(f"[Window:{len(history)} msgs]",end="")
+    facts_in_memory=[
+        m.content[:40] for m in history if isinstance(m,HumanMessage)
+    ]
+    print(f"Remebers:{facts_in_memory}")
+
+    '''
+      window_memory()
+问题是My name is Paulo
+回答是Nice to meet you, Paulo! How can I assist you today?
+问题是I live in Seattle
+回答是That's great! Seattle is known for its scenic views, vibrant culture, and coffee scene. Do you have any favorite spots or activities in the city?
+问题是I work as an AI engineer
+回答是That's intriguing! As an AI engineer, you must be involved in some exciting projects. What specific areas of AI do you work in, or what kind of projects are you currently focusing on?
+问题是I have 2 cats
+回答是That sounds lovely! Cats can be great companions. What are their names, and what do you enjoy most about having them?
+问题是What do you remember about me?
+回答是I remember that you work as an AI engineer and that you have two cats. If there's anything specific you’d like me to focus on or if you have more questions, feel free to let me know!
+[Window:4 msgs]Remebers:['I have 2 cats', 'What do you remember about me?']
+    '''
+
+
 
 if __name__ == "__main__":
     #basic_memory()
-    message_trimming()
+    #message_trimming()
+    window_memory()
