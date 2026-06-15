@@ -81,7 +81,48 @@ human:What's my name and what am I learning?
 ai:Your name is Paulo, and you are learning about LangChain. If you have any specific questions or topics you'd like to explore, feel free to ask!
 '''
 
+def message_trimming():
+    messages = [
+        SystemMessage(content="You are a helpful coding assistant."),
+        HumanMessage(content="What is Python?"),
+        AIMessage(
+            content="Python is a high-level programming language known for readability and versatility. It's used in web development, data science, AI, and automation."
+        ),
+        HumanMessage(content="How do I install it?"),
+        AIMessage(
+            content="You can install Python from python.org or use package managers like apt, brew, or chocolatey. I recommend Python 3.12+ for new projects."
+        ),
+        HumanMessage(content="What about pip?"),
+        AIMessage(
+            content="Pip is Python's package installer. It comes with Python 3.4+. Use 'pip install package_name' to install packages. Consider using virtual environments with venv or uv."
+        ),
+        HumanMessage(content="Can you summarize everything we discussed?"),
+    ]
+
+    print(f"原始消息长度{len(messages)}")
+
+    trimed=trim_messages(
+        messages=messages,
+        token_counter=llm,
+        strategy="last",
+        allow_partial=False,
+        include_system=True,
+        max_tokens=60
+    )
+
+    print(f"消减后的消息长度{len(trimed)}")
+    for msg in trimed:
+        role=type(msg).__name__.replace("Message","")
+        print(f"{role}:{msg.content}")
+
+    '''
+    原始消息长度8
+消减后的消息长度2
+System:You are a helpful coding assistant.
+Human:Can you summarize everything we discussed?
+    '''
 
 
 if __name__ == "__main__":
-    basic_memory()
+    #basic_memory()
+    message_trimming()
