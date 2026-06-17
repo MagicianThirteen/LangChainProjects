@@ -194,9 +194,149 @@ def window_memory():
 [Window:4 msgs]Remebers:['I have 2 cats', 'What do you remember about me?']
     '''
 
+def summary_memory():
+    chat_llm=init_chat_model(model="gpt-4o-mini", temperature=0.7)
+    summary_llm=init_chat_model(model="gpt-4o-mini", temperature=0)
+
+    chat_prompt=ChatPromptTemplate.from_messages(
+        [("system","You are a helpful assistant. Be concise.\n\nSummary of earlier conversation:\n{summary}"),
+        MessagesPlaceholder(variable_name="recent_message"),
+        ("human","{input}"),]
+    )
+    chat_chain=chat_prompt|chat_llm|parser
+    summarize_prompt=ChatPromptTemplate.from_template(
+        "Condense the current summary and new messages into a single updated summary "
+        "(2-3 sentences). Preserve all key facts about the user.\n\n"
+        "Current summary:\n{current_summary}\n\n"
+        "New messages:\n{new_messages}\n\n"
+        "Updated summary:"
+    )
+    summarize_chain=summarize_prompt|summary_llm|parser
+
+    running_summary=""
+    recent_messages=[]
+    MAX_RECENT=4
+
+    exchanges = [
+        "My name is Paulo and I'm from Seattle",
+        "I work as an AI engineer building RAG systems",
+        "I have 2 cats named Luna and Milo",
+        "I'm building a LangChain course for Udemy",
+        "What do you know about me? List everything.",
+    ]
+
+    print(f"\nConfig: keep last {MAX_RECENT} messages, summarize the rest\n")
+
+    for user_input in exchanges:
+        print(f"User:{user_input}")
+        response=chat_chain.invoke(
+            {
+                "summary":(running_summary if running_summary else "No prior conversation."),
+                "recent_message":recent_messages,
+                "input":user_input
+            }
+        )
+        print(f"AI:{response}")
+
+        recent_messages.append(HumanMessage(content=user_input))
+        recent_messages.append(AIMessage(content=response))
+
+        if len(recent_messages)>MAX_RECENT:
+            messages_to_summarize=recent_messages[:-MAX_RECENT]
+            formatted="\n".join(
+                f"{'Human' if isinstance(msg,HumanMessage) else 'AI'}:{msg.content}"
+                for msg in messages_to_summarize
+            )
+
+            running_summary=summarize_chain.invoke(
+                {
+                    "current_summary":(
+                        running_summary if running_summary else "None yet"
+                    ),
+                    "new_messages":formatted,
+                }
+            )
+
+            recent_messages=recent_messages[-MAX_RECENT:]
+
+            print(
+                f"  >>> Summarized! Compressed {len(messages_to_summarize)} old messages"
+            )
+            print(f"  >>> Summary: {running_summary}")
+            print(f"  >>> Recent buffer: {len(recent_messages)} messages")
+        print()
+
+    # --- Final state ---
+    print("=" * 60)
+    print("FINAL MEMORY STATE")
+    print("=" * 60)
+    print(f"\nRunning summary (compressed old context):\n  {running_summary}")
+    print(f"\nRecent messages kept verbatim ({len(recent_messages)}):")
+    for msg in recent_messages:
+        role = "Human" if isinstance(msg, HumanMessage) else "AI"
+        print(f"  {role}: {msg.content[:80]}")
+    print("\nKey insight: ALL facts preserved (name, city, job, cats, course)")
+    print("But token cost stays bounded -- old messages are compressed, not deleted!")
+
+    '''
+    
+Config: keep last 4 messages, summarize the rest
+
+User:My name is Paulo and I'm from Seattle
+AI:Nice to meet you, Paulo! How can I assist you today?
+
+User:I work as an AI engineer building RAG systems
+AI:That's interesting, Paulo! RAG (Retrieval-Augmented Generation) systems are a fascinating area of AI. What specific aspects of RAG systems are you working on?
+
+User:I have 2 cats named Luna and Milo
+AI:They sound adorable! What are Luna and Milo like?
+  >>> Summarized! Compressed 2 old messages
+  >>> Summary: Paulo is from Seattle and is seeking assistance.
+  >>> Recent buffer: 4 messages
+
+User:I'm building a LangChain course for Udemy
+AI:That sounds great! LangChain is a powerful framework for building applications with language models. What topics do you plan to cover in your course?
+  >>> Summarized! Compressed 2 old messages
+  >>> Summary: Paulo, an AI engineer from Seattle, is seeking assistance and specializes in building Retrieval-Augmented Generation (RAG) systems.
+  >>> Recent buffer: 4 messages
+
+User:What do you know about me? List everything.
+AI:Based on our conversation, I know the following about you:
+
+1. Your name is Paulo.
+2. You are an AI engineer from Seattle.
+3. You specialize in building Retrieval-Augmented Generation (RAG) systems.
+4. You have two cats named Luna and Milo.
+5. You are building a LangChain course for Udemy.
+
+If there's anything else you want to share or discuss, feel free!
+  >>> Summarized! Compressed 2 old messages
+  >>> Summary: Paulo, an AI engineer from Seattle specializing in building Retrieval-Augmented Generation (RAG) systems, has two cats named Luna and Milo.
+  >>> Recent buffer: 4 messages
+
+============================================================
+FINAL MEMORY STATE
+============================================================
+
+Running summary (compressed old context):
+  Paulo, an AI engineer from Seattle specializing in building Retrieval-Augmented Generation (RAG) systems, has two cats named Luna and Milo.
+
+Recent messages kept verbatim (4):
+  Human: I'm building a LangChain course for Udemy
+  AI: That sounds great! LangChain is a powerful framework for building applications w
+  Human: What do you know about me? List everything.
+  AI: Based on our conversation, I know the following about you:
+
+1. Your name is Paul
+
+Key insight: ALL facts preserved (name, city, job, cats, course)
+But token cost stays bounded -- old messages are compressed, not deleted!
+    '''
+      
 
 
 if __name__ == "__main__":
     #basic_memory()
     #message_trimming()
-    window_memory()
+    #window_memory()
+    summary_memory()
