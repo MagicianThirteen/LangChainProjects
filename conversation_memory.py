@@ -332,6 +332,111 @@ Recent messages kept verbatim (4):
 Key insight: ALL facts preserved (name, city, job, cats, course)
 But token cost stays bounded -- old messages are compressed, not deleted!
     '''
+
+def persistent_memory():
+    #一条线存，一条线读取
+    #runnablewithmessagehistory+SQLChatMessageHistory
+    from langchain_community.chat_message_histories import SQLChatMessageHistory
+    import sqlite3
+    import os
+
+    user_messages=[
+        "我喜欢剑来里的宁瑶",
+        "我最近在学ai开发",
+        "我喜欢用深色的主题去编程",
+    ]
+    user_toaskai=[
+        "我喜欢剑来里的哪个人物",
+        "我最近在学什么",
+        "我喜欢用什么主题去编程"
+    ]
+
+    #数据库的一些基本配置
+    db_path="./chat_history.db"
+    connection_string=f"sqlite:///{db_path}"
+    session_id="user_facts"
+    config={"configurable":{"session_id":session_id}}
+
+    #每次都是新建数据库
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+    def build_chain():
+        llm=init_chat_model(model="gpt-4o-mini", temperature=0.7)
+        prompt=ChatPromptTemplate.from_messages(
+            [("system","你是一个很有用的助手，重点记用户的喜好和习惯"),
+             MessagesPlaceholder(variable_name="history"),
+             ("human","{input}")]
+        )
+        parser=StrOutputParser()
+        chain=prompt|llm|parser
+        def get_session_id(id:str)->BaseChatMessageHistory:
+            return SQLChatMessageHistory(
+                session_id=id,
+                connection=connection_string
+            )
+        chain_with_history=RunnableWithMessageHistory(
+            chain,
+            input_messages_key="input",
+            history_messages_key="history",
+            get_session_history=get_session_id
+        )
+        return chain_with_history
+    chain_v1=build_chain()
+    for msg in user_messages:
+        response=chain_v1.invoke(
+            {
+                "input":msg,
+            },
+            config=config
+        )
+        print(f"问题是:{msg}")
+        print(f"回答是：{response}")
+        '''
+          chain_v1=build_chain()
+        问题是:我喜欢剑来里的宁瑶
+        回答是：宁瑶是《剑来》中的重要角色，她聪慧、坚韧，还拥有独特的魅力。你喜欢她的哪些方面呢？是她的性格、能力，还是她与主角之间的关系？
+        问题是:我最近在学ai开发
+        回答是：太好了！AI开发是一个非常有前景的领域。你具体在学习哪些方面呢？是机器学习、深度学习还是自然语言处理？如果有任何问题或者需要资源推荐，随时告诉我！
+        问题是:我喜欢用深色的主题去编程
+        回答是：深色主题在编程时确实很受欢迎，尤其是在长时间编写代码的时候，它能减少眼睛疲劳。你最喜欢使用哪些编辑器或IDE？比如VS Code、PyCharm还是其他的？如果你需要一些深色主题的推荐或者插件，也可以告诉我！
+        '''
+    del chain_v1
+    #准备第二条问的链
+    chain_v2=build_chain()
+    for msg in user_toaskai:
+        response=chain_v2.invoke(
+            {"input":msg},
+            config=config
+
+        )
+        print(f"问题是:{msg}")
+        print(f"回答是：{response}")
+    '''
+    问题是:我喜欢剑来里的哪个人物
+回答是：你之前提到过你喜欢《剑来》里的宁瑶，她的个性和背景都很吸引人。如果你还有其他喜欢的角色或者想讨论的内容，欢迎分享！
+问题是:我最近在学什么
+回答是：你最近在学习AI开发，特别是相关的技术和工具。如果有任何具体的问题或者需要讨论的主题，随时告诉我！
+问题是:我喜欢用什么主题去编程
+回答是：你喜欢使用深色主题进行编程，这样可以减少眼睛疲劳并提升编程体验。如果你有喜欢的深色主题或者想推荐的工具，也可以分享哦！
+    '''
+
+    #检查数据库，然后删除
+    conn = sqlite3.connect(db_path)
+    cursor = conn.execute("SELECT * FROM message_store ORDER BY rowid")
+    rows = cursor.fetchall()
+    print(f"Total messages stored in DB: {len(rows)}\n")
+
+    for i, row in enumerate(rows):
+        print(
+            f"  Row {i + 1}: session={row[0] if len(row) > 0 else 'N/A'}, "
+            f"message (first 200 chars): {str(row[1])[:200] if len(row) > 1 else 'N/A'}..."
+        )
+    conn.close()
+
+    # Cleanup
+    if os.path.exists(db_path):
+        os.remove(db_path)
       
 
 
@@ -339,4 +444,5 @@ if __name__ == "__main__":
     #basic_memory()
     #message_trimming()
     #window_memory()
-    summary_memory()
+    #summary_memory()
+    persistent_memory()
