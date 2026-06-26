@@ -1,5 +1,6 @@
 from langgraph.graph import StateGraph,START,END
-from typing import TypedDict
+from typing import TypedDict,Annotated
+import operator
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -41,5 +42,64 @@ def demo_simple_graph():
      Input: hello agent, Output: HELLO AGENT, Step: 1
     '''
 
+def accumulating_state():
+    class AccumulatingState(TypedDict):
+        messages:Annotated[list[str],operator.add]
+        count:Annotated[int,operator.add]
+    
+    def step_one(state:AccumulatingState)->dict:
+        return {"messages":["step 1"],
+                "count":1}
+    def step_two(state:AccumulatingState)->dict:
+        return {"messages":["step 2"],
+                "count":1}
+    graph=StateGraph(AccumulatingState)
+    graph.add_node("step_one", step_one)
+    graph.add_node("step_two", step_two)
+
+    graph.add_edge(START, "step_one")
+    graph.add_edge("step_one", "step_two")
+    graph.add_edge("step_two", END)
+
+    app=graph.compile()
+    # # visualize the graph
+    print("\n--- Mermaid Graph ---")
+    print(app.get_graph().draw_mermaid())
+
+    # save as PNG
+    png_bytes = app.get_graph().draw_mermaid_png()
+    with open("graph_2.png", "wb") as f:
+        f.write(png_bytes)
+
+    result = app.invoke({"messages": ["Initial message"], "count": 0})
+    print(f"messages:{result['messages']}\n count:{result['count']}")
+
+    '''
+    
+--- Mermaid Graph ---
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+        __start__([<p>__start__</p>]):::first
+        step_one(step_one)
+        step_two(step_two)
+        __end__([<p>__end__</p>]):::last
+        __start__ --> step_one;
+        step_one --> step_two;
+        step_two --> __end__;
+        classDef default fill:#f2f0ff,line-height:1.2
+        classDef first fill-opacity:0
+        classDef last fill:#bfb6fc
+
+messages:['Initial message', 'step 1', 'step 2']
+ count:2
+    
+    '''
+
+
 if __name__ == "__main__":  
-    demo_simple_graph() 
+    #demo_simple_graph()
+    accumulating_state() 
