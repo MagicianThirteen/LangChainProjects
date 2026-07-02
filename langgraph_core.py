@@ -99,7 +99,41 @@ messages:['Initial message', 'step 1', 'step 2']
     
     '''
 
+#==== Message State(Common pattern) ===
+from langgraph.graph import add_messages
+from langchain_core.messages import HumanMessage,AIMessage,BaseMessage
+from langchain.chat_models import init_chat_model
+
+class MessageState(TypedDict):
+    messages:Annotated[list[BaseMessage],add_messages]
+
+def message_state():
+    llm=init_chat_model("gpt-4o-mini",temperature=0)
+    def chat_node(state:MessageState)->dict:
+        response=llm.invoke(state['messages'])
+        return {"messages":[response]}
+    
+    graph = StateGraph(MessageState)
+    graph.add_node("chat_node", chat_node)
+    graph.add_edge(START, "chat_node")
+    graph.add_edge("chat_node", END)
+
+    #注意，这里llm.invoke返回的是AIMessage
+    #agent.invoke，返回的是一个字典，是关于定义好的state的状态的字典
+    agent=graph.compile()
+    result=agent.invoke({"messages":[HumanMessage(content="剑来的女主叫什么名字")]})
+    for msg in result["messages"]:
+        role="human" if isinstance(msg,HumanMessage) else "ai"
+        print(f"  {role}: {msg.content}")
+    
+    '''
+      human: 剑来的女主叫什么名字
+      ai: 《剑来》的女主角叫做“李清照”。她是小说中的重要角色之一，具有独特的个性和背景。小说围绕着她与主角之间的故事展开。如果你对这个角色或小说有更多问题，欢迎提问！
+    '''
+
+
 
 if __name__ == "__main__":  
     #demo_simple_graph()
-    accumulating_state() 
+    #accumulating_state()
+    message_state() 
