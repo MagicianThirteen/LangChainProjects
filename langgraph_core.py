@@ -1,7 +1,10 @@
+
 from langgraph.graph import StateGraph,START,END
-from typing import TypedDict,Annotated
+from typing import Literal, TypedDict,Annotated
 import operator
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
 
 load_dotenv()
 
@@ -131,9 +134,163 @@ def message_state():
       ai: 《剑来》的女主角叫做“李清照”。她是小说中的重要角色之一，具有独特的个性和背景。小说围绕着她与主角之间的故事展开。如果你对这个角色或小说有更多问题，欢迎提问！
     '''
 
+#练习
+def demo_langgraph():
+    llm=init_chat_model(model="gpt-4o-mini",temperature=0)
+    class QuestionState(TypedDict):
+        topic:str
+        three_questions:list[str]
+        choose_question:str
+        answer:str
+    class response(BaseModel):
+        questions:list[str]=Field(description="用来存放通过主题生成的三个问题")
+        choose_question:str=Field(description="用来存放在三个问题当中选择要回答的那个问题")
+        question_answer:str=Field(description="用来存放选择的这个问题的答案")
+    
+    structed_llm=llm.with_structured_output(response)
+    def node_1(state:QuestionState)->dict:
+        system=f"""
+        你是一个很有用的助手，请根据{state["topic"]}
+        生成三个与之相关的简短问题
+        """
+        response=structed_llm.invoke([SystemMessage(content=system)])
+        return {
+            "three_questions":response.questions
+        }
+    
+    def node_2(state:QuestionState)->dict:
+        questions=",".join(state["three_questions"])
+        system=f"""
+                你是一个很有用的助手，从以下几个问题{questions}中，
+                选一个作为你想回答的问题，并对问题的答案做简短回答
+        """
+        result=structed_llm.invoke([SystemMessage(content=system)])
+        return {
+            "choose_question":result.choose_question,
+            "answer":result.question_answer
+        }
+    
+    graph=StateGraph(QuestionState)
+
+    graph.add_node("node_1",node_1) 
+    graph.add_node("node_2",node_2)
+
+    graph.add_edge(START,"node_1")
+    graph.add_edge("node_1","node_2")
+    graph.add_edge("node_2",END) 
+
+    agent=graph.compile()
+
+    result=agent.invoke({
+        "answer":"",
+        "choose_question":"",
+        "three_questions":[],
+        "topic":"langgraph"
+    }) 
+
+    for q in result["three_questions"]:
+        print(f"选出的问题：{q}")
+
+    print(f"选择的问题是：{result['choose_question']}")
+    print(f"问题的回答是：{result['answer']}")  
+
+    '''
+    选出的问题：How does LangGraph visualize language models?
+    选出的问题：What types of language data can be analyzed using LangGraph?
+    选出的问题：In what ways can LangGraph improve language processing tasks?
+    选择的问题是：How does LangGraph visualize language models?
+    问题的回答是：LangGraph visualizes language models by creating interactive graphs that represent the relationships and structures within the language data, allowing users to explore and analyze the connections between different linguistic elements.
+    '''    
+
+class QualityState(TypedDict):
+    content:str
+    quality_score:int
+    feed_back:str
+    final_content:str
+    iteration:int
+
+llm = init_chat_model("gpt-4o-mini", temperature=0.0)
+
+def condition_loop():
+    def evalute(state:QualityState)->dict:
+        system=(f"Rate this content quality from 1-10. Reply with just the number.\n\n"
+                f"Content: {state['content']}")
+        response=llm.invoke(system)
+        try:
+            score=int(response.content.strip())
+        except ValueError:
+            score=5
+        return{
+            "quality_score":score
+        }
+    
+    def improve(state:QualityState)->dict:
+        system=f"Improve this content to be more engaging and clear:\n\n{state['content']}"
+        response=llm.invoke(system)
+        return{
+            "content":response.content,
+            "iteration":state["iteration"] + 1
+        }
+
+    def finalize_content(state:QualityState)->dict:
+        return{
+            "final_content":state["content"],
+            "feed_back":f"Approved after {state['iteration']} iterations with score {state['quality_score']}",
+        }
+    
+    def should_continue(state:QualityState)->Literal["improve","finalize"]:
+        if state["quality_score"]>=7:
+            return "finalize"
+        elif state["iteration"]>=3:
+            return "finalize"
+        else:
+            return "improve"
+    
+    graph=StateGraph(QualityState)
+
+    graph.add_node("evaluate",evalute)
+    graph.add_node("improve", improve)
+    graph.add_node("finalize", finalize_content)\
+    
+    graph.add_edge(START,"evaluate")
+
+    graph.add_conditional_edges("evaluate",
+                                should_continue,
+                                {"improve":"improve",
+                                 "finalize":"finalize"})
+    graph.add_edge("improve","evaluate")
+    graph.add_edge("finalize",END)
+
+    agent=graph.compile()
+
+    result=agent.invoke(
+        {"content":"ai is coool",
+         "quality_score":0,
+         "feed_back":"",
+         "final_content":"",
+         "iteration":0}
+    )
+
+    print(f"Original: AI is cool")
+    print(f"Final: {result['final_content'][:200]}...")
+    print(f"Feedback: {result['feed_back']}")
+
+
+    '''
+    Original: AI is cool
+    Final: AI is incredibly cool! It’s transforming the way we live, work, and interact with the world around us. From smart assistants that help us manage our daily tasks to advanced algorithms that drive innov...
+    Feedback: Approved after 1 iterations with score 7
+    '''
+    
+
+
+        
+
 
 
 if __name__ == "__main__":  
     #demo_simple_graph()
     #accumulating_state()
-    message_state() 
+    #message_state()
+    #demo_langgraph() 
+    condition_loop()
