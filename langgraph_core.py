@@ -281,7 +281,133 @@ def condition_loop():
     Final: AI is incredibly cool! It’s transforming the way we live, work, and interact with the world around us. From smart assistants that help us manage our daily tasks to advanced algorithms that drive innov...
     Feedback: Approved after 1 iterations with score 7
     '''
+
+def multi_path_route():
+    class TaskState(TypedDict):
+        task:str
+        urgency:str
+        complexity:str
+        handler:str
+        result:str
     
+    def analyze_task(state:TaskState)->dict:
+        #通过两个llm检查任务是否紧急和复杂
+        system=f"Is this task urgent? Reply 'urgent' or 'normal'\n task:{state['task']}"
+        response=llm.invoke(system)
+        urgent=response.content.lower().strip()
+
+        system=f"s this task complex? Reply 'complex' or 'simple'\n task:{state['task']}"
+        response=llm.invoke(system)
+        complexity=response.content.lower().strip()
+
+        return{
+            "urgency":urgent,
+            "complexity":complexity
+        }
+    
+    def route_task(state:TaskState)->str:
+        isUrgency="urgent" in state["urgency"]
+        isComplex="complex" in state["complexity"]
+
+        if isUrgency and isComplex:
+            return "urgent_complex"
+        elif isUrgency:
+            return "urgent_simple"
+        elif isComplex:
+            return "normal_complex"
+        else:
+            return "normal_simple"
+        
+    def urgent_complex(state:TaskState)->dict:
+        return {
+            "handler":"Senior Team",
+            "result":"Escalated to senior team for immediate action"
+        }
+    
+    def urgent_simple(state:TaskState)->dict:
+        return {
+            "handler":"Quick Response",
+            "result":"Handled immediately by available agent"
+        }
+    def normal_complex(state:TaskState)->dict:
+        return {
+            "handler": "Specialist",
+            "result":"Assigned to specialist for thorough handling"
+        }
+    def normal_simple(state:TaskState)->dict:
+        return {
+            "handler":"Standard",
+            "result":"Added to standard queue"
+        }
+    
+    graph=StateGraph(TaskState)
+    
+    graph.add_node("analyze_task",analyze_task)
+    graph.add_node("urgent_complex",urgent_complex)
+    graph.add_node("urgent_simple",urgent_simple)
+    graph.add_node("normal_complex",normal_complex)
+    graph.add_node("normal_simple",normal_simple)
+
+    graph.add_edge(START,"analyze_task")
+    graph.add_conditional_edges("analyze_task",route_task,{
+        "urgent_complex":"urgent_complex",
+        "urgent_simple":"urgent_simple",
+        "normal_complex":"normal_complex",
+        "normal_simple":"normal_simple"
+    })
+    graph.add_edge("urgent_complex",END)
+    graph.add_edge("urgent_simple",END)
+    graph.add_edge("normal_complex",END)
+    graph.add_edge("normal_simple",END)
+
+    agent=graph.compile()
+
+    tasks = [
+        "Server is down! Need immediate fix!",
+        "Update the documentation for the API",
+        "Redesign the entire database schema",
+        "Fix the typo on the homepage",
+    ]
+
+    for t in tasks:
+        result=agent.invoke({
+            "task":t,
+            "complexity":"",
+            "handler":"",
+            "result":"",
+            "urgency":""
+        })
+        print(f"Task: {t}")
+        print(f"Urgency: {result['urgency']} | Complexity: {result['complexity']}")
+        print(f"Handler: {result['handler']}")
+        print(f"Result: {result['result']}")
+        print("-" * 40)
+    '''
+    Task: Server is down! Need immediate fix!
+    Urgency: urgent | Complexity: complex
+    Handler: Senior Team
+    Result: Escalated to senior team for immediate action
+    ----------------------------------------
+    Task: Update the documentation for the API
+    Urgency: normal | Complexity: simple
+    Handler: Standard
+    Result: Added to standard queue
+    ----------------------------------------
+    Task: Redesign the entire database schema
+    Urgency: urgent | Complexity: complex
+    Handler: Senior Team
+    Result: Escalated to senior team for immediate action
+    ----------------------------------------
+    Task: Fix the typo on the homepage
+    Urgency: normal | Complexity: simple
+    Handler: Standard
+    Result: Added to standard queue
+    ----------------------------------------
+    '''
+
+        
+    
+
 
 
         
@@ -293,4 +419,5 @@ if __name__ == "__main__":
     #accumulating_state()
     #message_state()
     #demo_langgraph() 
-    condition_loop()
+    #condition_loop()
+    multi_path_route()
