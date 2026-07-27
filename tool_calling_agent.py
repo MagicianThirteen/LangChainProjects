@@ -109,7 +109,68 @@ Total messages: 5
 ----------------------------------------
     '''
 
+@tool
+def divide(a:float,b:float)->str:
+    """Demo tool error handling."""
+    if b==0:
+        return "Errors: Division by zero"
+    result=a/b
+    return f"the result of {a} divided by {b} is {result}"
+
+def tool_with_errors():
+    tools=[divide]
+    llm_with_tools=llm.bind_tools(tools)
+    def agent_node(state: AgentState) -> dict:
+            response = llm_with_tools.invoke(state["messages"])
+            return {"messages": [response]}
+
+    def should_continue(state:AgentState)->Literal["tools","end"]:
+        last_message=state["messages"][-1]
+        if not hasattr(last_message,"tool_calls") or not last_message.tool_calls:
+            return "end"
+        return "tools"
+
+    tool_node=ToolNode(tools)
+    graph = StateGraph(AgentState)
+    graph.add_node("agent", agent_node)
+    graph.add_node("tools", tool_node)
+    graph.add_edge(START, "agent")
+    graph.add_conditional_edges(
+        "agent", should_continue, {"tools": "tools", "end": END}
+    )
+    graph.add_edge("tools", "agent")
+
+    agent = graph.compile()
+
+    print("\nTool Error Handling Demo:\n")
+
+    queries = [
+        "Divide 100 by 5",
+        "Divide 100 by 0",  # Will trigger error
+    ]
+
+    for query in queries:
+        result = agent.invoke({"messages": [HumanMessage(content=query)]})
+        print(f"Query: {query}")
+        print(f"Response: {result['messages'][-1].content}")
+        print("-" * 40)
+
+    '''
+    
+Tool Error Handling Demo:
+
+Query: Divide 100 by 5
+Response: The result of dividing 100 by 5 is 20.
+----------------------------------------
+Query: Divide 100 by 0
+Response: It is not possible to divide by zero. Division by zero is undefined in mathematics. If you have any other calculations or questions, feel free to ask!
+----------------------------------------
+    
+    '''
+    
+
 
 
 if __name__ == "__main__":
-    tool_agent()       
+    #tool_agent() 
+    tool_with_errors()      
