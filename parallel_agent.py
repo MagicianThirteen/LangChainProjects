@@ -106,7 +106,66 @@ def Parallel_Research():
     汇总结果是宁瑶是《剑来》的重要角色，性格坚韧、聪慧，剑术高强，情感复杂，命运多舛，展现出丰富的人物深度。
     '''
 
+class MapReduceState(TypedDict):
+    document:list[str]
+    summaries:list[str]
+    final_summary:str
+
+def map_reduce():
+    def map(state:MapReduceState)->dict:
+        summaries=[]
+        for doc in state["document"]:
+            summary=llm.invoke([
+                "system","用一句话总结这些文档",
+                "human",doc
+            ])
+            summaries.append(summary.content)
+        return{
+            "summaries":summaries
+        }
+
+    def reduce(state:MapReduceState)->dict:
+        summary="\n\n".join([f"第{i}份文档总结的内容是：{doc}" for i,doc in enumerate(state['summaries'])])
+        final=llm.invoke([
+            "system","简单总结这些文档",
+            "human",summary
+        ])
+        return{
+            "final_summary":final.content
+        }
+
+    graph=StateGraph(MapReduceState)
+    graph.add_node("map",map)
+    graph.add_node("reduce",reduce)
+
+    graph.add_edge(START,"map")
+    graph.add_edge("map","reduce")
+    graph.add_edge("reduce",END)
+
+    agent=graph.compile()
+
+    documets=[
+        "宁瑶是剑来里的女主",
+        "宁瑶是个很漂亮的女子",
+        "宁瑶是个天才的剑修",
+    ]
+
+    result=agent.invoke(
+        {
+            "document":documets,
+            "final_summary":"",
+            "summaries":[]
+        }
+    )
+
+    print(f"合并总结后的文档是{result['final_summary']}")
+
+    '''
+    合并总结后的文档是宁瑶是《剑来》中的女主角，以其坚强的个性、外貌出众和卓越的剑术天赋在故事中扮演着重要角色。
+    '''
+
 
 if __name__ == "__main__":
-    Parallel_Research()
+    #Parallel_Research()
+    map_reduce()
     
