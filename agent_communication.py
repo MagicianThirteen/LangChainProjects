@@ -123,5 +123,122 @@ def AdvisorAgent():
     for i in result["advisor"]:
         print(i)
 
+class BlackboardState(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]
+    # Blackboard fields — the shared workspace
+    topic: str
+    drafts: Annotated[list[str], operator.add]
+    critiques: Annotated[list[str], operator.add]
+    iteration: int
+    is_approved: bool
+
+
+def create_blackboard_system():
+    """
+    Blackboard pattern: multiple agents read/write a shared workspace.
+    A drafter writes, a critic reviews, and they iterate until approved.
+    """
+
+    class ApprovalDecision(BaseModel):
+        approved: bool = Field(description="Whether the draft is good enough")
+        feedback: str = Field(description="Specific feedback if not approved")
+
+    critic_llm = llm.with_structured_output(ApprovalDecision)
+
+    def drafter(state: BlackboardState) -> dict:
+        """Reads critiques from blackboard, writes improved draft."""
+        context_parts = [f"Topic: {state['topic']}"]
+
+        if state["drafts"]:
+            context_parts.append(f"Previous draft: {state['drafts'][-1]}")
+        if state["critiques"]:
+            context_parts.append(f"Feedback to address: {state['critiques'][-1]}")
+
+        context = "\n".join(context_parts)
+
+        response = llm.invoke(
+            [
+                SystemMessage(
+                    content=(
+                        "You are a skilled writer. Write or revise a short paragraph "
+                        "(3-4 sentences) based on the topic and any feedback provided. "
+                        "If there's feedback, directly address it in your revision."
+                    )
+                ),
+                HumanMessage(content=context),
+            ]
+        )
+
+        return {
+            "drafts": [response.content],
+            "messages": [
+                AIMessage(
+                    content=f"[DRAFTER iteration {state['iteration'] + 1}]: {response.content}",
+                    name="drafter",
+                )
+            ],
+            "iteration": state["iteration"] + 1,
+        }
+
+    def critic(state: BlackboardState) -> dict:
+        """Reads latest draft from blackboard, writes critique or approves."""
+        latest_draft = state["drafts"][-1] if state["drafts"] else "No draft yet"
+
+        decision = critic_llm.invoke(
+            [
+                SystemMessage(
+                    content=(
+                        "You are a strict editor. Review the draft for clarity, accuracy, "
+                        "and engagement. Approve ONLY if it's genuinely good. "
+                        "If iteration is 3 or more, be more lenient."
+                    )
+                ),
+                HumanMessage(
+                    content=(
+                        f"Topic: {state['topic']}\n"
+                        f"Iteration: {state['iteration']}\n"
+                        f"Draft: {latest_draft}"
+                    )
+                ),
+            ]
+        )
+
+        # Force approval after 3 iterations to prevent infinite loops
+        approved = decision.approved or state["iteration"] >= 3
+
+        result = {
+            "is_approved": approved,
+            "messages": [
+                AIMessage(
+                    content=f"[CRITIC]: {'APPROVED' if approved else 'REVISION NEEDED'} - {decision.feedback}",
+                    name="critic",
+                )
+            ],
+        }
+
+        if not approved:
+            result["critiques"] = [decision.feedback]
+
+        return result
+
+    def route_after_critic(state: BlackboardState) -> Literal["drafter", "end"]:
+        """Loop back to drafter if not approved."""
+        if state["is_approved"]:
+            return "end"
+        return "drafter"
+
+    graph = StateGraph(BlackboardState)
+
+    graph.add_node("drafter", drafter)
+    graph.add_node("critic", critic)
+
+    graph.add_edge(START, "drafter")
+    graph.add_edge("drafter", "critic")
+    graph.add_conditional_edges(
+        "critic", route_after_critic, {"drafter": "drafter", "end": END}
+    )
+
+    return graph.compile()
+
 if __name__ == "__main__":
     AdvisorAgent()
