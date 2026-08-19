@@ -276,12 +276,14 @@ def hierarchical_test():
         "final_answer":""
     })
 
+    print(f"final_answer{result['final_answer']}")
     for msg in result["messages"]:
         if isinstance(msg,AIMessage):
             print(msg.content)
 
 
 '''
+final_answerresearch_lead:宁瑶是《剑来》的重要角色，展现出聪慧与坚韧，具备卓越的修炼潜力，成为故事中的关键人物。
 [ceo]选这个部门research，原因是The request involves fact-finding and investigation, which aligns with the research department's focus on technical deep-dives.
 [paper_review] 宁瑶是《剑来》中的重要角色，聪慧且坚韧，具备强大修炼潜力。
 [web_search] 宁瑶是《剑来》中的女主角，聪慧坚韧，修炼天赋极高。
