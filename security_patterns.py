@@ -145,7 +145,7 @@ Masked:
     His SSN is [SSN REDACTED] and card number is [CARD REDACTED].
 '''
 
-#通过llm再做一层识别防护，给llm提供提示词
+#通过llm再做一层识别防护，给llm提供提示词，让llm自己分辨
 class SecurityGuard:
     def __init__(self):
         self.llm=ChatOpenAI(model="gpt-4o-mini",temperature=0)
